@@ -1,7 +1,7 @@
-<h1 align="center">E2P</h1>
+<h1 align="center">Persona Restorer</h1>
 
 <p align="center">
-  <img src="https://img.shields.io/badge/Evidence--to--Persona-policy%20review%20agent-4493F8?style=flat" alt="Evidence-to-Persona policy review agent" />
+  <img src="https://img.shields.io/badge/E2P-Evidence--to--Persona-4493F8?style=flat" alt="E2P: Evidence-to-Persona" />
   <img src="https://img.shields.io/badge/Python%203.12-FastAPI%20%C2%B7%20uvicorn-4493F8?style=flat" alt="Python 3.12, uvicorn" />
   <img src="https://img.shields.io/badge/sources-KOSIS%20%C2%B7%20data.go.kr-4493F8?style=flat" alt="KOSIS and data.go.kr sources" />
   <img src="https://img.shields.io/badge/license-MIT-4493F8?style=flat" alt="MIT license" />
@@ -13,24 +13,24 @@
 
 <p align="center">
   <strong>Synthetic persona panels that say where their numbers come from.</strong><br/>
-  E2P (Evidence-to-Persona) turns one sentence of policy or product intent into a weighted panel of synthetic personas<br/>
+  Persona Restorer (E2P, Evidence-to-Persona) turns one sentence of policy or product intent into a weighted panel of synthetic personas<br/>
   built from Korean public statistics, interviews the panel about the proposal, and reports the blind spots, the uncertainty<br/>
   and the questions a real survey still has to answer.
 </p>
 
 <h3 align="center"><a href="#getting-started"><ins>Getting started</ins></a> &nbsp;·&nbsp; <a href="#how-a-review-runs"><ins>How a review runs</ins></a> &nbsp;·&nbsp; <a href="#what-the-numbers-mean"><ins>What the numbers mean</ins></a></h3>
 
-![E2P overview](docs/screenshots/overview.png)
+![Persona Restorer overview](docs/screenshots/overview.png)
 
 ## The problem
 
 Building a defensible persona set means collecting statistics and reports, checking that their populations, reference dates and variable definitions are compatible, and only then deciding on representative types and their weights. A generative model skips all of that: it will happily combine numbers before checking their sources, or invent a plausible-looking setting from nothing.
 
-E2P keeps the language model where it is useful, in planning, extraction and narration, and puts the parts that must not be improvised, source validation, constraint approval, statistics and safety, in code. Every output carries its sources, its weights, its uncertainty and the questions that only a real survey can settle.
+Persona Restorer keeps the language model where it is useful, in planning, extraction and narration, and puts the parts that must not be improvised, source validation, constraint approval, statistics and safety, in code. Every output carries its sources, its weights, its uncertainty and the questions that only a real survey can settle.
 
 ## What you get
 
-| You type | E2P returns |
+| You type | Persona Restorer returns |
 |---|---|
 | "Build service personas for single-person households in Seoul" | A weighted synthetic persona panel, the evidence status behind it, its uncertainty, and field-survey questions |
 | "Review a weekend community service for single-person households in Seoul" | The same panel plus a mock review of the proposal, blind-spot hypotheses, suggested fixes and a real-world validation plan |
@@ -155,7 +155,7 @@ When no quantitative constraint is approved, the panel is weighted as a uniform 
 
 ## Demo mode and honesty rules
 
-Without a language model configured, E2P still collects, validates, estimates and reports, but refuses to manufacture persona survey answers. Setting `PERSONA_RESTORER_DEMO_MODEL=1` enables a clearly labelled deterministic response generator for demonstrations; the UI shows the demo state and every answer says it is a demo response that references only the sampled attributes. Demo mode is never a substitute for a configured model or a real survey.
+Without a language model configured, Persona Restorer still collects, validates, estimates and reports, but refuses to manufacture persona survey answers. Setting `PERSONA_RESTORER_DEMO_MODEL=1` enables a clearly labelled deterministic response generator for demonstrations; the UI shows the demo state and every answer says it is a demo response that references only the sampled attributes. Demo mode is never a substitute for a configured model or a real survey.
 
 Safety checks run at the planning stage and block political persuasion, manipulation targeting, coercion or exclusion by design, and inference of sensitive attributes. First-person synthetic personas of minors and vulnerable groups are out of scope. Web documents and attachments are treated as external data, fetches are limited to public addresses with SSRF protection and a 5 MB response cap.
 
@@ -164,8 +164,8 @@ Safety checks run at the planning stage and block political persuasion, manipula
 Python 3.12 or newer.
 
 ```bash
-git clone https://github.com/yc9954/e2p.git
-cd e2p
+git clone https://github.com/yc9954/persona-restorer.git
+cd persona-restorer
 python3.12 -m venv .venv
 .venv/bin/pip install -e '.[dev]'
 cp .env.example .env                       # optional: model and data keys
@@ -246,7 +246,7 @@ The UI offers downloads for the report, panel, interviews and evidence.
 
 ## Credits
 
-E2P was built by Team A at the 2026 YAI x OpenAI hackathon. Contributors, by GitHub handle: kim2choi, ljh8450, yc9954 and BOOK-R4R6F38DIQ. The original team repository is [ljh8450/Agent24](https://github.com/ljh8450/Agent24); this repository carries its full history under the product name.
+Persona Restorer (shown as "E2P Agent" in the app) was built by Team A at the 2026 YAI x OpenAI hackathon. Contributors, by GitHub handle: kim2choi, ljh8450, yc9954 and BOOK-R4R6F38DIQ. The original team repository is [ljh8450/Agent24](https://github.com/ljh8450/Agent24); this repository carries its full history under the product name. The name follows the team's own project title, 페르소나 복원기: it restores the joint structure that published statistical tables lose, and refuses to pretend where it cannot.
 
 ## License
 
