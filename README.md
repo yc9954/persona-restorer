@@ -1,157 +1,253 @@
-# E2P
+<h1 align="center">E2P</h1>
 
-공개 통계를 통해 가중 합성 페르소나 패널을 구축합니다.
-각 페르소나의 모의 인터뷰를 바탕으로 정책과 제품 서비스의 사각지대를 사전에 검토하는 AI 에이전트입니다.
+<p align="center">
+  <img src="https://img.shields.io/badge/Evidence--to--Persona-policy%20review%20agent-4493F8?style=flat" alt="Evidence-to-Persona policy review agent" />
+  <img src="https://img.shields.io/badge/Python%203.12-FastAPI%20%C2%B7%20uvicorn-4493F8?style=flat" alt="Python 3.12, uvicorn" />
+  <img src="https://img.shields.io/badge/sources-KOSIS%20%C2%B7%20data.go.kr-4493F8?style=flat" alt="KOSIS and data.go.kr sources" />
+  <img src="https://img.shields.io/badge/license-MIT-4493F8?style=flat" alt="MIT license" />
+</p>
 
-## 해결하려는 문제
+<p align="center">
+  <sub><a href="docs/README.ko.md">한국어</a></sub>
+</p>
 
-근거 있는 페르소나를 구축하려면 다양한 통계와 보고서를 수집하고 파편화된 데이터의 모집단과 시점 및 변수 정의가 호환되는지 검토한 뒤 대표 유형과 비중을 정해야 합니다. 생성형 AI는 출처와 데이터 정의를 확인하기 전 수치를 결합하거나 가상 설정을 구성할 위험이 있습니다.
+<p align="center">
+  <strong>Synthetic persona panels that say where their numbers come from.</strong><br/>
+  E2P (Evidence-to-Persona) turns one sentence of policy or product intent into a weighted panel of synthetic personas<br/>
+  built from Korean public statistics, interviews the panel about the proposal, and reports the blind spots, the uncertainty<br/>
+  and the questions a real survey still has to answer.
+</p>
 
-**E2P**는 제한된 조사 여건에서도 한 번의 요청을 시작점으로 공개 근거 검증과 사전 조사 패널 구성을 지원합니다. 결과물에는 출처와 가중치 및 불확실성 그리고 실제 조사에서 확인할 질문을 함께 기록합니다.
+<h3 align="center"><a href="#getting-started"><ins>Getting started</ins></a> &nbsp;·&nbsp; <a href="#how-a-review-runs"><ins>How a review runs</ins></a> &nbsp;·&nbsp; <a href="#what-the-numbers-mean"><ins>What the numbers mean</ins></a></h3>
 
-에이전트는 사용자 입력을 대화 요청과 보충 질문 및 정책 검토 요청으로 분류합니다. 정책 검토 요청과 첨부 기획 문서는 정책 계획 수립과 근거 수집 과정으로 처리합니다.
+![E2P overview](docs/screenshots/overview.png)
 
-## 입력과 출력
+## The problem
 
-에이전트는 입력 목적에 따라 페르소나 구축과 정책 검토를 실행합니다.
+Building a defensible persona set means collecting statistics and reports, checking that their populations, reference dates and variable definitions are compatible, and only then deciding on representative types and their weights. A generative model skips all of that: it will happily combine numbers before checking their sources, or invent a plausible-looking setting from nothing.
 
-| 사용자 입력                                            | 최종 출력                                                                 |
-| ------------------------------------------------------ | ------------------------------------------------------------------------- |
-| 서울 1인 가구를 위한 서비스 페르소나를 만들어줘      | 합성 페르소나 패널과 근거 상태 및 불확실성 그리고 실제 조사 질문          |
-| 서울 1인 가구를 위한 주말 커뮤니티 서비스를 검토해줘 | 합성 페르소나 패널과 모의 검토 및 사각지대 가설과 보완안 및 실제 조사 계획 |
+E2P keeps the language model where it is useful, in planning, extraction and narration, and puts the parts that must not be improvised, source validation, constraint approval, statistics and safety, in code. Every output carries its sources, its weights, its uncertainty and the questions that only a real survey can settle.
 
-## 동작 방식
+## What you get
 
-채팅 입력은 먼저 의도 분류를 거칩니다.
+| You type | E2P returns |
+|---|---|
+| "Build service personas for single-person households in Seoul" | A weighted synthetic persona panel, the evidence status behind it, its uncertainty, and field-survey questions |
+| "Review a weekend community service for single-person households in Seoul" | The same panel plus a mock review of the proposal, blind-spot hypotheses, suggested fixes and a real-world validation plan |
 
-| 의도            | 동작                                                                   |
-| :-------------- | :--------------------------------------------------------------------- |
-| `policy_review` | 아래 자율 검토 파이프라인 실행                                         |
-| `clarify`       | 요청 정보가 부족할 때 대상과 범위 및 수단을 확인한 뒤 검토 진행       |
-| `conversation`  | 이전 결과 후속 질문과 일반 대화에 세션 메모리 기반 실시간 스트리밍     |
+Attach an existing planning document (`.md`) with the `+` button and it becomes the policy under review: target group, variables and interview questions are derived from the document, and the chat line only needs the request itself.
 
-검토 파이프라인:
+## Features
 
-1. **계획 설계** — 실존하는 KOSIS 공표 표 목록을 먼저 확인해 측정 가능한 변수만 설계합니다. 첨부 문서와 직전
-   실행 맥락은 검토 주제를 정하며 채팅 문구는 요청 표현으로 처리합니다.
-2. **근거 수집** — 한국 공공기관과 연구기관의 신뢰할 수 있는 출처를 웹에서 찾고 동시에 국가통계포털 KOSIS에서
-   통계표를 내려받습니다. 받은 원문은 스냅샷으로 고정해 보관합니다.
-3. **제약 추출과 승인 게이트** — 원문에서 정량 제약 후보를 뽑고 모집단이 정확히 일치하는 항목을 코드 규칙으로
-   자동 승인합니다. 승인 기준은 코드 규칙으로 관리합니다.
-4. **근거 복구 루프** — 근거의 공백을 관찰하고 추가 검색과 KOSIS 재조회 및 대리 지표 승인 또는 수집 중단을
-   다음 행동으로 판단합니다. 예산은 코드가 강제합니다. 최대 2라운드와 라운드당 새 질의 3개 및 질의 중복 금지를 적용합니다.
-   `stop` 결정은 수집 중단을 뜻하며 파이프라인은 그대로 완주합니다.
-5. **결합분포 추정** — 승인된 제약을 만족하는 분포 중 가장 치우침이 적은 최대엔트로피 분포를 점추정으로 삼고
-   그 제약으로 가능한 값의 범위인 식별구간을 함께 계산합니다. 충돌하는 근거는 낮은 순위로 내리고 남은 근거로 다시 계산합니다.
-6. **패널 구성** — 속성 조합별 세그먼트를 비중과 함께 만듭니다. 인원 상한 밖의 조합은 사각지대로 따로 기록합니다.
-7. **모의 인터뷰** — 검토 대상 정책안을 놓고 패널 전원을 인터뷰합니다. 비교 요청이 있을 때에만 대안을 포함하며 기본 검토는 요청한 정책 하나를 대상으로 합니다.
-8. **인사이트와 보고서** — 가중 반응 분포와 한계를 담은 단일 HTML 보고서를 작성합니다.
+<table>
+<tr>
+<td width="50%" valign="middle">
 
-실행 순서와 승인 규칙 및 안전 차단과 통계 계산은 코드가 결정합니다. 언어모델이 관여하는 계획 설계와 제약 후보 추출 및 다음 행동 판단은 실행 기록에 함께 남깁니다.
-언어모델은 패널 서술과 모의 인터뷰 및 인사이트 작성에 관여하며 데이터베이스와 계산기 및 네트워크 접근은 애플리케이션 계층에서 관리합니다.
+### One sentence in, a full review out
 
-## 기획서 첨부
+Chat input is classified first. A `policy_review` request starts the autonomous pipeline; `clarify` asks for target, scope or instrument when they are missing; `conversation` answers follow-up questions over the session memory with streamed responses.
 
-이미 기획서가 있다면 입력창의 `+` 버튼으로 `.md` 파일을 첨부할 수 있습니다. 첨부한 문서가 곧 검토 대상
-정책이 되어 대상 집단과 변수 및 인터뷰 질문이 문서 내용에서 도출됩니다. 채팅에는 정책 검토 요청 한 줄을 입력하면
-됩니다.
+</td>
+<td width="50%">
+  <img src="docs/screenshots/01-landing.png" alt="E2P landing screen with the policy-review prompt" width="100%" />
+</td>
+</tr>
+<tr>
+<td width="50%" valign="middle">
 
-## 서비스 흐름
+### Evidence you can open
+
+Sources are searched in parallel across Korean public institutions and research portals while KOSIS tables are downloaded directly. Raw documents are pinned as snapshots, and each candidate shows its host, its classification and why it was kept or excluded.
+
+</td>
+<td width="50%">
+  <img src="docs/screenshots/04-review-gate.png" alt="Evidence candidates and the constraint gate during a review" width="100%" />
+</td>
+</tr>
+<tr>
+<td width="50%" valign="middle">
+
+### A panel with weights, not a cast of characters
+
+Segments are built per attribute combination with their share of the population. Combinations that fall outside the headcount cap are recorded separately as blind spots instead of being silently dropped. Each persona is labelled as fully synthetic.
+
+</td>
+<td width="50%">
+  <img src="docs/screenshots/03-persona-panel.png" alt="The synthetic persona panel with segment weights" width="100%" />
+</td>
+</tr>
+<tr>
+<td width="50%" valign="middle">
+
+### Mock interviews against the proposal
+
+Every persona is interviewed about the policy under review. Responses are grouped as conditional, low change, refusal or positive, and each answer states which sampled attributes it drew on and what barrier it reports.
+
+</td>
+<td width="50%">
+  <img src="docs/screenshots/06-mock-review.png" alt="Weighted response distribution and panel voices from the mock review" width="100%" />
+</td>
+</tr>
+<tr>
+<td width="50%" valign="middle">
+
+### A report that separates estimate from range
+
+The single-file HTML report leads with a pre-validation brief: evidence status, the identification interval with no structural assumption, panel coverage, a verdict, the rights and legal pre-check, blind-spot hypotheses and a concrete validation plan for a real pilot.
+
+</td>
+<td width="50%">
+  <img src="docs/screenshots/10-report-top.png" alt="The top of the generated policy review report" width="100%" />
+</td>
+</tr>
+<tr>
+<td width="50%" valign="middle">
+
+### Every step on a second screen
+
+A raw event monitor streams the run's events live: tool calls, approvals, artifact hashes and completion markers. Nothing the agent decided is hidden from the operator.
+
+</td>
+<td width="50%">
+  <img src="docs/screenshots/11-monitor.png" alt="The raw event monitor streaming a run" width="100%" />
+</td>
+</tr>
+</table>
+
+More screens are in [`docs/screenshots/`](docs/screenshots/): the plan and collection stages for both request types, the persona fleet view, the full response matrix, the evidence artifact, the report drawer, a persona detail card and the full report.
+
+## How a review runs
+
+1. **Plan.** The agent first lists the KOSIS tables that actually exist and designs only variables that can be measured from them. An attached document and the previous run's context set the review topic; the chat line is treated as the request wording.
+2. **Collect.** Trusted Korean public and research sources are searched on the web while statistical tables are pulled from KOSIS. Every raw document is snapshotted.
+3. **Extract and gate.** Quantitative constraint candidates are extracted from the raw text. Only candidates whose population matches exactly are auto-approved, by code rules, not by the model.
+4. **Recover.** The agent inspects evidence gaps and chooses the next move: another search, a KOSIS re-query, approving a proxy indicator, or stopping collection. Budgets are enforced in code: at most two rounds, three new queries per round, no duplicate queries. A `stop` ends collection; the pipeline still runs to completion.
+5. **Estimate.** Among all distributions that satisfy the approved constraints, the maximum-entropy one is taken as the point estimate, and the identification interval, the range of values those constraints allow, is computed beside it. Conflicting evidence is demoted and the estimate recomputed without it.
+6. **Build the panel.** Segments per attribute combination with their weights; combinations beyond the headcount cap become recorded blind spots.
+7. **Interview.** The whole panel is interviewed about the proposal. Alternatives are included only when a comparison was requested.
+8. **Report.** Weighted response distributions and limitations go into one HTML report.
+
+Execution order, approval rules, safety blocks and statistics are decided by code. The model's contributions, plan design, constraint extraction, next-action choice, persona narration, interviews and insights, are all written to the run log. Database, calculator and network access stay in the application layer.
 
 ```mermaid
 flowchart LR
-    U["사용자"] --> API["서비스 API"]
-
-    API -->|"대화 요청"| CHAT["대화 응답"]
-    CHAT --> SSE["SSE 실시간 응답"]
-
-    API -->|"정책 검토 요청"| PLAN["정책 계획"]
-    PLAN -->|"공개 근거 수집·제약 검증"| ANALYZE["통계 계산·합성 패널"]
-    ANALYZE -->|"모의 검토·보고서 생성"| SSE
-
-    API -. "실행·이벤트 저장" .-> DB["SQLite"]
-    ANALYZE -. "원문·보고서 저장" .-> FILES["파일 산출물"]
+    U["User"] --> API["Service API"]
+    API -->|"conversation"| CHAT["Chat answer"] --> SSE["SSE stream"]
+    API -->|"policy review"| PLAN["Plan"]
+    PLAN -->|"collect evidence · gate constraints"| ANALYZE["Estimate · synthetic panel"]
+    ANALYZE -->|"mock interviews · report"| SSE
+    API -. "runs and events" .-> DB["SQLite"]
+    ANALYZE -. "snapshots and reports" .-> FILES["Artifacts on disk"]
 ```
 
-## 설치와 실행
+## What the numbers mean
 
-Python 3.12 이상 필요.
+The statistical core follows the specification in [`SPEC.md`](SPEC.md) and the product definition in [`PROJECT.md`](PROJECT.md).
+
+- **Constraints** are published marginal or joint distributions over five to seven discrete variables, each tied to a source, a population and a reference date. Only constraints whose population matches the target exactly pass the gate; others may be approved as labelled proxy indicators.
+- **Feasibility** is checked first. If no joint distribution satisfies the approved constraints, the conflicting evidence is ranked down and the calculation repeated.
+- **Point estimate** is the maximum-entropy joint distribution consistent with the constraints, computed by iterative proportional fitting. It is one value obtained by adding a structural assumption, "least biased", and the report says so.
+- **Identification interval** is the range a quantity of interest can take across all feasible joint distributions, computed as a linear program. It depends on the evidence alone, with no structural assumption, and is always shown next to the point estimate.
+- **Structure sensitivity** repeats the estimate under explicitly named DAG candidates so the reader can see how much the answer moves with the assumed dependency structure.
+- **Synthetic surveys** sample personas by ancestral sampling from a chosen structure. Their answers are exploration material for a hypothesis, not evidence about real people, real opinion or causal effects.
+
+When no quantitative constraint is approved, the panel is weighted as a uniform scenario and the report labels it as such rather than presenting it as a population estimate.
+
+## Demo mode and honesty rules
+
+Without a language model configured, E2P still collects, validates, estimates and reports, but refuses to manufacture persona survey answers. Setting `PERSONA_RESTORER_DEMO_MODEL=1` enables a clearly labelled deterministic response generator for demonstrations; the UI shows the demo state and every answer says it is a demo response that references only the sampled attributes. Demo mode is never a substitute for a configured model or a real survey.
+
+Safety checks run at the planning stage and block political persuasion, manipulation targeting, coercion or exclusion by design, and inference of sensitive attributes. First-person synthetic personas of minors and vulnerable groups are out of scope. Web documents and attachments are treated as external data, fetches are limited to public addresses with SSRF protection and a 5 MB response cap.
+
+## Getting started
+
+Python 3.12 or newer.
 
 ```bash
+git clone https://github.com/yc9954/e2p.git
+cd e2p
 python3.12 -m venv .venv
-.venv/bin/pip install -e .\[dev\]
+.venv/bin/pip install -e '.[dev]'
+cp .env.example .env                       # optional: model and data keys
 .venv/bin/python -m uvicorn app.asgi:app --port 8000
 ```
 
-브라우저에서 `http://127.0.0.1:8000`으로 접속합니다. 데이터베이스와 출처 스냅샷 및 실행 산출물은 저장소의 `data/`에
-저장됩니다.
-
-원본 실행 이벤트를 별도 화면에서 동시에 보려면 두 서버를 같은 저장소로 띄웁니다.
+Open `http://127.0.0.1:8000`. To watch raw run events on a second screen, start both servers on the same repository:
 
 ```bash
-.venv/bin/python scripts/run_servers.py
+.venv/bin/python scripts/run_servers.py    # product on :8000, event monitor on :8001
 ```
 
-- 제품 화면: `http://127.0.0.1:8000`
-- 원본 이벤트 모니터: `http://127.0.0.1:8001`
+| Variable | Required | Purpose |
+|---|---|---|
+| `LLM_API_URL`, `LLM_API_KEY`, `LLM_MODEL` | optional | OpenAI-compatible model used for planning, extraction, narration and interviews. Without a key, statistics, panel and report still run; interviews and narration are skipped |
+| `LLM_MODEL_FINAL` | optional | Higher-tier model tried first for insights and conversation, falling back to `LLM_MODEL` |
+| `KOSIS_API_KEY` | optional | KOSIS (Korean Statistical Information Service) connector. Without it, web-search evidence is used |
+| `DATA_GO_KR_SERVICE_KEY` | optional | Public Data Portal connector |
+| `PERSONA_RESTORER_DEMO_MODEL=1` | optional | Deterministic, clearly labelled demo responses when no model is connected |
+| `GATEWAY_TOKEN` | optional | Bearer token required when the API is exposed beyond loopback |
 
-`.env.example`을 `.env`로 복사해 필요한 값만 채우면 서버 시작 시 자동으로 읽습니다(셸에서 export한 값이 우선).
+Keys are used only in request URLs at call time and are replaced with `[configured]` in the database, snapshots and logs.
 
-| 환경 변수                                 | 필수 | 용도                                                                                                                 |
-| :---------------------------------------- | :--- | :------------------------------------------------------------------------------------------------------------------- |
-| `LLM_API_URL` 및 `LLM_API_KEY` 및 `LLM_MODEL` | 선택 | 사용할 언어모델의 주소와 키 및 이름을 설정합니다. 키 미설정 환경에서는 통계와 패널 및 보고서를 생성하고 인터뷰와 서술은 제외합니다 |
-| `LLM_MODEL_FINAL`                         | 선택 | 인사이트와 대화에 먼저 쓸 상위 모델입니다. 실패 시 기본 모델로 자동 전환합니다                                         |
-| `KOSIS_API_KEY`                           | 선택 | 국가통계포털 KOSIS 공개 데이터 연결용 키입니다. 키 미설정 환경에서는 웹 검색 근거를 사용합니다                       |
-| `DATA_GO_KR_SERVICE_KEY`                  | 선택 | 공공데이터포털 연결용 키                                                                                             |
-| `PERSONA_RESTORER_DEMO_MODEL=1`           | 선택 | 모델 미연결 시 시연에 쓰는 고정 응답입니다. 화면에 데모 상태를 표시합니다                                               |
-| `GATEWAY_TOKEN`                           | 선택 | 이 서버를 내 컴퓨터 밖에서 접근할 수 있게 열어둘 때 요구할 인증 토큰                                                 |
-
-키는 요청 URL에 쓰이며 저장소와 산출물 및 로그에는 `[configured]`로 대체됩니다.
-
-## 산출물
-
-실행이 끝나면 `data/runs/<run-id>/`에 남습니다.
-
-| 파일               | 내용                                                                                                      |
-| :----------------- | :-------------------------------------------------------------------------------------------------------- |
-| `report.html`      | 최종 보고서 — 요약 브리프와 근거 및 가정과 값의 범위 및 정책안별 가중 반응과 사각지대 및 한계             |
-| `panel.jsonl`      | 합성 페르소나 패널의 세그먼트 비중과 속성 및 서술 — 다음 검토에 재사용                                     |
-| `interviews.jsonl` | 세그먼트별 모의 인터뷰 응답. 모의 인터뷰 실행 시 생성                                                       |
-| `evidence.json`    | 저장한 출처와 제약 및 제외 사유                                                                            |
-| `run.json`         | 질문과 변수 및 출처와 제약 및 이벤트를 담은 실행 전체 기록의 재현용 사본. 디스크에 저장합니다              |
-
-화면의 내려받기 버튼은 보고서와 패널 및 인터뷰와 근거 네 가지입니다. `run.json`은 같은 실행을 그대로
-되짚기 위한 재현용 사본으로 디스크에 저장합니다.
-
-## 검증
+### Verification
 
 ```bash
-PYTHONPATH=. uv run --extra dev --with pytest pytest -q evals tests
+PYTHONPATH=. uv run --extra dev --with pytest pytest -q evals tests   # unit, statistics and agent-loop tests plus graded eval cases
 uv run --extra dev ruff check app tests
-npm install && npx playwright install chromium && npm run test:e2e   # 브라우저에서 실제 화면을 조작하는 검사
-# 아래는 실제 모델 API 키를 써서 몇 가지 질문을 직접 돌려보는 점검입니다.
-# 결과는 scripts/spot_results/ 에 저장됩니다.
-PYTHONPATH=. python scripts/spot_check.py
+npm install && npx playwright install chromium && npm run test:e2e     # browser tests against the real UI
+PYTHONPATH=. python scripts/spot_check.py                              # a few live questions with a real model key; results in scripts/spot_results/
 ```
 
-## 안전과 정확성 경계
+## Artifacts
 
-- 정치적 설득과 조작 표적화 및 강압과 배제 설계 그리고 민감 특성 추론 요청은 계획 단계에서 차단합니다. 안전 검사는
-  계획을 결정하는 필드를 확인합니다. 권리검토의 제한 가능성 서술은 정책 검토 맥락으로 처리합니다.
-- 웹 원문과 첨부 문서는 외부 데이터로 분류합니다. 문서 내용은 근거 추출 대상으로 처리합니다.
-- 자료 수집 대상은 공개 인터넷 주소로 제한합니다. 내부 서버를 향한 요청 유도 공격을 차단하고 한 번에 받는 응답 크기는 5MB로 제한합니다.
-- 점추정은 가장 치우침이 적은 분포라는 구조 가정을 얹어 얻은 하나의 값입니다. 근거로 좁혀지는 값의
-  범위인 식별구간과 구별해 표시합니다.
-- 페르소나와 인터뷰 및 인사이트는 완전 합성 자료로 라벨합니다. 실제 개인과 여론 및 인과효과에 관한 증거로 활용하는 범위는 제외합니다. 미성년자와 취약
-  집단의 1인칭 합성 페르소나는 계획 범위에서 제외합니다.
+Each run leaves its outputs in `data/runs/<run-id>/`:
 
-## 알려진 한계
+| File | Contents |
+|---|---|
+| `report.html` | The final report: brief, evidence and assumptions, value ranges, weighted responses per proposal, blind spots, limitations |
+| `panel.jsonl` | Segment weights, attributes and narration of the synthetic panel, reusable in the next review |
+| `interviews.jsonl` | Mock interview responses per segment, when interviews ran |
+| `evidence.json` | Stored sources, constraints and exclusion reasons |
+| `run.json` | The complete run record (question, variables, sources, constraints, events) for reproduction |
 
-- 계획은 실존 공표 표에 변수를 맞춥니다. 주제에 맞는 통계가 부족하면 인접 주제의 표를 대리 지표로 활용합니다.
-  대리 지표 축은 보고서에 표시하며 해석에는 사람의 판단이 필요합니다.
-- 모의 인터뷰는 실제 시민 반응 검증을 위한 가설 탐색 자료입니다. 보고서의 현실 검증 계획은 소규모 시범과 실제 설문을 다음 단계로 제시합니다.
+The UI offers downloads for the report, panel, interviews and evidence.
 
-## 라이선스와 자산
+## Project structure
 
-MIT — [LICENSE](LICENSE). 아바타는 DiceBear notionists CC0-1.0을 따르며 데이터 출처는 각 공공기관 이용약관을 따릅니다.
-자세한 내용은 [THIRD_PARTY_ASSETS.md](THIRD_PARTY_ASSETS.md).
+```
+.
+├── app/
+│   ├── asgi.py             # ASGI app, routes, SSE streaming
+│   ├── service.py          # intent routing and run orchestration
+│   ├── policy_review.py    # plan → collect → gate → recover → estimate → panel → interview → report
+│   ├── sources.py          # web search, KOSIS / data.go.kr connectors, snapshots
+│   ├── statistics.py       # feasibility, IPF point estimate, LP identification intervals
+│   ├── personas.py         # segment construction, ancestral sampling, mock interviews
+│   ├── reporting.py        # single-file HTML report
+│   ├── contracts.py        # event and record contracts
+│   ├── store.py            # SQLite runs, events and artifacts
+│   ├── monitor.py          # raw event monitor endpoints
+│   ├── avatars.py, errors.py
+├── static/                 # chat UI (index.html, app.js, style.css)
+├── monitor/                # second-screen event monitor UI
+├── evals/                  # graded cases, holdout set, trace grader
+├── tests/                  # unit and integration tests
+├── playwright/             # browser tests
+├── scripts/                # run_servers.py, spot_check.py
+├── docs/                   # README.ko.md, screenshots
+├── PROJECT.md, SPEC.md, USER.md
+└── pyproject.toml, uv.lock
+```
+
+## Known limits
+
+- Plans are fitted to tables that actually exist. When no statistic matches the topic, tables from adjacent topics are used as proxy indicators; the report marks those axes and interpretation needs a person.
+- Mock interviews are exploration material for hypotheses about real citizen reactions. The report's validation plan proposes a small pilot and a real survey as the next step.
+
+## Credits
+
+E2P was built by Team A at the 2026 YAI x OpenAI hackathon. Contributors, by GitHub handle: kim2choi, ljh8450, yc9954 and BOOK-R4R6F38DIQ. The original team repository is [ljh8450/Agent24](https://github.com/ljh8450/Agent24); this repository carries its full history under the product name.
+
+## License
+
+MIT. See [LICENSE](LICENSE). Avatars are DiceBear notionists (CC0-1.0); data sources follow each institution's terms of use. Details in [THIRD_PARTY_ASSETS.md](THIRD_PARTY_ASSETS.md).
